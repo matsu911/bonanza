@@ -1,1 +1,6 @@
 winbin/*
+*.o
+*~
+log
+build
+.lock-waf_darwin_build
