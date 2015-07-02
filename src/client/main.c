@@ -1,3 +1,4 @@
+/* -*- c-basic-offset: 2 -*- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,12 +9,7 @@
 
 static int main_child( tree_t * restrict ptree );
 
-int
-#if defined(CSASHOGI) || defined(USI)
-main( int argc, char *argv[] )
-#else
-main()
-#endif
+int main( int argc, char *argv[] )
 {
   int iret;
   tree_t * restrict ptree;
@@ -28,10 +24,10 @@ main()
   if ( argc != 2 || strcmp( argv[1], "csa_shogi" ) )
     {
       MessageBox( NULL,
-		  "The executable image is not intended\x0d"
-		  "as an independent program file.\x0d"
-		  "Execute CSA.EXE instead.",
-		  str_myname, MB_OK | MB_ICONINFORMATION );
+                  "The executable image is not intended\x0d"
+                  "as an independent program file.\x0d"
+                  "Execute CSA.EXE instead.",
+                  str_myname, MB_OK | MB_ICONINFORMATION );
       return EXIT_FAILURE;
     }
 #endif
@@ -41,29 +37,23 @@ main()
   else                                           { usi_mode = usi_off; }
 #endif
 
-  if ( ini( ptree ) < 0 )
-    {
-      out_error( "%s", str_error );
-      return EXIT_SUCCESS;
-    }
+  if ( ini( ptree ) < 0 ) {
+    out_error( "%s", str_error );
+    return EXIT_SUCCESS;
+  }
 
-  for ( ;; )
-    {
-      iret = main_child( ptree );
-      if ( iret == -1 )
-	{
-	  out_error( "%s", str_error );
-	  ShutdownAll();
-	  break;
-	}
-      else if ( iret == -2 )
-	{
-	  out_warning( "%s", str_error );
-	  ShutdownAll();
-	  continue;
-	}
-      else if ( iret == -3 ) { break; }
-    }
+  for ( ;; ) {
+    iret = main_child( ptree );
+    if ( iret == -1 ) {
+      out_error( "%s", str_error );
+      ShutdownAll();
+      break;
+    } else if ( iret == -2 ) {
+      out_warning( "%s", str_error );
+      ShutdownAll();
+      continue;
+    } else if ( iret == -3 ) { break; }
+  }
 
   if ( fin() < 0 ) { out_error( "%s", str_error ); }
 
@@ -88,9 +78,8 @@ main_child( tree_t * restrict ptree )
 
   /* move prediction failed, pondering aborted,
      and we have opponent's move in input buffer. */
-  else if ( ponder_move == MOVE_PONDER_FAILED )
-    {
-    }
+  else if ( ponder_move == MOVE_PONDER_FAILED ) {
+  }
 
   /* pondering is interrupted or ended.
      do nothing until we get next input line. */
