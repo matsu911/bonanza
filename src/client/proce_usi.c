@@ -1,3 +1,5 @@
+/* -*- c-basic-offset: 2 -*- */
+
 #include "proce_usi.h"
 #include <limits.h>
 #include <string.h>
@@ -133,17 +135,17 @@ usi_go( tree_t * restrict ptree, char **lasts )
     {
       token = strtok_r( NULL, str_delimiters, lasts );
       if ( token == NULL )
-	{
-	  str_error = str_bad_cmdline;
-	  return -1;
-	}
+        {
+          str_error = str_bad_cmdline;
+          return -1;
+        }
 
       l = strtol( token, &ptr, 0 );
       if ( ptr == token || l > UINT_MAX || l < 1 )
-	{
-	  str_error = str_bad_cmdline;
-	  return -1;
-	}
+        {
+          str_error = str_bad_cmdline;
+          return -1;
+        }
       
       usi_byoyomi     = (unsigned int)l;
       depth_limit     = PLY_MAX;
@@ -187,7 +189,7 @@ usi_posi( tree_t * restrict ptree, char **lasts )
     }
     
   if ( ini_game( ptree, &min_posi_no_handicap,
-		 flag_history, NULL, NULL ) < 0 ) { return -1; }
+                 flag_history, NULL, NULL ) < 0 ) { return -1; }
     
   token = strtok_r( NULL, str_delimiters, lasts );
   if ( token == NULL ) { return 1; }
@@ -205,11 +207,9 @@ usi_posi( tree_t * restrict ptree, char **lasts )
       
     if ( usi2csa( ptree, token, str_buf ) < 0 )            { return -1; }
     if ( interpret_CSA_move( ptree, &move, str_buf ) < 0 ) { return -1; }
-    if ( make_move_root( ptree, move, ( flag_history | flag_time
-					| flag_rep
-					| flag_detect_hang ) ) < 0 )
+    if ( make_move_root( ptree, move, ( flag_history | flag_time | flag_rep | flag_detect_hang ) ) < 0 )
       {
-	return -1;
+        return -1;
       }
   }
     
