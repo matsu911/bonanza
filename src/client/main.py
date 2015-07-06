@@ -51,15 +51,15 @@ bn.get_str_error.restype = c_char_p
 
 ptree = bn.tlp_atree_work
 
-def display(commands):
+def cmd_display(commands):
     bn.out_board(ptree, c_stdout, 0, 0)
     return 1
 
-def ping(commands):
+def cmd_ping(commands):
     print "pong"
     return 1
 
-def move(commands):
+def cmd_move(commands):
     if game_status.value & mask_game_end:
         str_error.value = str_game_ended.value
         return -2
@@ -95,7 +95,11 @@ def move(commands):
         if iret < 0: return iret
     return 1
 
-def suspend(commands):
+def cmd_quit(commands):
+    game_status.value |= flag_quit
+    return 1
+
+def cmd_suspend(commands):
     if game_status.value & (flag_pondering | flag_puzzling):
         game_status.value |= flag_quit_ponder
         return 2
@@ -107,13 +111,15 @@ def procedure(ptree):
     if len(commands) == 0 or commands[0][0] == '#':
         return 1
     if commands[0] == 'display':
-        return display(commands[1:])
+        return cmd_display(commands[1:])
     if commands[0] == 'ping':
-        return ping(commands[1:])
+        return cmd_ping(commands[1:])
     if commands[0] == 'move':
-        return move(commands[1:])
+        return cmd_move(commands[1:])
     if commands[0] == 'suspend':
-        return suspend(commands[1:])
+        return cmd_suspend(commands[1:])
+    if commands[0] == 'quit':
+        return cmd_quit(commands[1:])
     print commands
     return 1
 
