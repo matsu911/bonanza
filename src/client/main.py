@@ -95,6 +95,11 @@ def cmd_move(commands):
         if iret < 0: return iret
     return 1
 
+def cmd_move_now(commands):
+    if game_status.value & flag_thinking:
+        game_status.value |= flag_move_now
+    return 1
+
 def cmd_quit(commands):
     game_status.value |= flag_quit
     return 1
@@ -110,6 +115,8 @@ def procedure(ptree):
     commands = str_cmdline.value.split()
     if len(commands) == 0 or commands[0][0] == '#':
         return 1
+    if commands[0] == 's':
+        return cmd_move_now(commands[1:])
     if commands[0] == 'display':
         return cmd_display(commands[1:])
     if commands[0] == 'ping':
