@@ -29,29 +29,37 @@ flag_nopeek          = 0b0001 << 20
 flag_noponder        = 0b0010 << 20
 flag_noprompt        = 0b0100 << 20
 flag_sendpv          = 0b1000 << 20
-flag_skip_root_move  = 0b0001 << 24      
+flag_skip_root_move  = 0b0001 << 24
 
-bn             = CDLL(find_library('./build/libbonanza'))
-c_stdout       = c_void_p.in_dll(bn, '__stdoutp')
-game_status    = c_int.in_dll(bn, 'game_status')
-str_busy_think = c_char_p.in_dll(bn, 'str_busy_think')
-str_game_ended = c_char_p.in_dll(bn, 'str_game_ended')
-str_error      = c_char_p.in_dll(bn, 'str_error')
-str_cmdline    = (c_char * 512).in_dll(bn, 'str_cmdline')
+flag_time        = 0b0001
+flag_history     = 0b0010
+flag_rep         = 0b0100
+flag_detect_hang = 0b1000
+flag_nomake_move = 0b0010 << 4
+flag_nofmargin   = 0b0100 << 4
+
+bn              = CDLL(find_library('./build/libbonanza'))
+c_stdout        = c_void_p.in_dll(bn, '__stdoutp')
+game_status     = c_int.in_dll(bn, 'game_status')
+str_busy_think  = c_char_p.in_dll(bn, 'str_busy_think')
+str_game_ended  = c_char_p.in_dll(bn, 'str_game_ended')
+str_error       = c_char_p.in_dll(bn, 'str_error')
+str_cmdline     = (c_char * 512).in_dll(bn, 'str_cmdline')
+time_turn_start = c_uint.in_dll(bn, 'time_turn_start')
 
 bn.get_str_error.restype = c_char_p
 
 ptree = bn.tlp_atree_work
 
-def display():
+def display(commands):
     bn.out_board(ptree, c_stdout, 0, 0)
     return 1
 
-def ping():
+def ping(commands):
     print "pong"
     return 1
 
-def move():
+def move(commands):
     if game_status.value & mask_game_end:
         str_error.value = str_game_ended.value
         return -2
@@ -61,19 +69,42 @@ def move():
     elif game_status.value & (flag_pondering | flag_puzzling):
 	game_status.value |= flag_quit_ponder
 	return 2
-
+    if len(commands) == 0:
+        iret = bn.get_elapsed(pointer(time_turn_start))
+        if iret < 0:
+            return iret
+        return bn.com_turn_start(ptree, 0)
+    try:
+        for i in range(0, int(commands[0])):
+            if game_status.value & (flag_move_now | mask_game_end):
+                break
+	    iret = bn.get_elapsed(pointer(time_turn_start))
+	    if iret < 0: return iret
+	    iret = bn.com_turn_start(ptree, 0)
+	    if iret < 0: return iret
+        return 1
+    except:
+        pass
+    for command in commands:
+        move = c_uint(0)
+        iret = bn.interpret_CSA_move(ptree, pointer(move), command)
+        if iret < 0: return iret
+        iret = bn.get_elapsed(pointer(time_turn_start))
+        if iret < 0: return iret
+        iret = bn.make_move_root(ptree, move, (flag_history | flag_time | flag_rep | flag_detect_hang))
+        if iret < 0: return iret
     return 1
 
 def procedure(ptree):
     commands = str_cmdline.value.split()
-    if commands[0] == '' or commands[0][0] == '#':
+    if len(commands) == 0 or commands[0][0] == '#':
         return 1
     if commands[0] == 'display':
-        return display()
+        return display(commands[1:])
     if commands[0] == 'ping':
-        return ping()
+        return ping(commands[1:])
     if commands[0] == 'move':
-        return move()
+        return move(commands[1:])
     print commands
     return 1
 
