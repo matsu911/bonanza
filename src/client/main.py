@@ -2,7 +2,20 @@ import sys, os
 from ctypes import *
 from ctypes.util import find_library
 
+SIZE_PLAYERNAME = 256
+MAX_ANSWER      = 8
+
+class Record_t(Structure):
+    _fields_ = [("info", (c_char * MAX_ANSWER * 8)),
+                ("str_name1", (c_char * SIZE_PLAYERNAME)),
+                ("str_name2", (c_char * SIZE_PLAYERNAME)),
+                ("pf", c_void_p),
+                ("games", c_uint),
+                ("moves", c_uint),
+                ("lines", c_uint)]
+
 MOVE_PONDER_FAILED = 0xfe000000
+MOVE_RESIGN        = 0xff000000
 
 flag_mated           = 0b0001
 flag_resigned        = 0b0010
@@ -46,6 +59,8 @@ str_game_ended  = c_char_p.in_dll(bn, 'str_game_ended')
 str_error       = c_char_p.in_dll(bn, 'str_error')
 str_cmdline     = (c_char * 512).in_dll(bn, 'str_cmdline')
 time_turn_start = c_uint.in_dll(bn, 'time_turn_start')
+root_turn       = c_int.in_dll(bn, 'root_turn')
+record_game     = Record_t.in_dll(bn, 'record_game')
 
 bn.get_str_error.restype = c_char_p
 
@@ -111,6 +126,26 @@ def cmd_suspend(commands):
     game_status.value |= flag_suspend
     return 1
 
+def cmd_resign(commands):
+    if len(commands) == 0 or commands[0] == 'T':
+        if game_status.value & flag_thinking:
+            str_error.value = str_busy_think.value
+            return -2
+        elif game_status.value & (flag_pondering | flag_puzzling):
+            game_status.value |= flag_quit_ponder
+            return 2
+        if game_status.value & mask_game_end: return 1
+        game_status.value |= flag_resigned
+        bn.update_time(root_turn)
+        bn.out_CSA(ptree, pointer(record_game), MOVE_RESIGN)
+    else:
+        try:
+            resign_threshold.value = int(commands[0])
+        except:
+	    str_error.value = str_bad_cmdline
+            return -2
+    return 1
+
 def procedure(ptree):
     commands = str_cmdline.value.split()
     if len(commands) == 0 or commands[0][0] == '#':
@@ -123,6 +158,8 @@ def procedure(ptree):
         return cmd_ping(commands[1:])
     if commands[0] == 'move':
         return cmd_move(commands[1:])
+    if commands[0] == 'resign':
+        return cmd_resign(commands[1:])
     if commands[0] == 'suspend':
         return cmd_suspend(commands[1:])
     if commands[0] == 'quit':
