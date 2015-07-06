@@ -95,6 +95,13 @@ def move(commands):
         if iret < 0: return iret
     return 1
 
+def suspend(commands):
+    if game_status.value & (flag_pondering | flag_puzzling):
+        game_status.value |= flag_quit_ponder
+        return 2
+    game_status.value |= flag_suspend
+    return 1
+
 def procedure(ptree):
     commands = str_cmdline.value.split()
     if len(commands) == 0 or commands[0][0] == '#':
@@ -105,6 +112,8 @@ def procedure(ptree):
         return ping(commands[1:])
     if commands[0] == 'move':
         return move(commands[1:])
+    if commands[0] == 'suspend':
+        return suspend(commands[1:])
     print commands
     return 1
 
