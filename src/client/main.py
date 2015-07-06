@@ -57,6 +57,7 @@ game_status     = c_int.in_dll(bn, 'game_status')
 str_busy_think  = c_char_p.in_dll(bn, 'str_busy_think')
 str_game_ended  = c_char_p.in_dll(bn, 'str_game_ended')
 str_error       = c_char_p.in_dll(bn, 'str_error')
+str_bad_cmdline = c_char_p.in_dll(bn, 'str_bad_cmdline')
 str_cmdline     = (c_char * 512).in_dll(bn, 'str_cmdline')
 time_turn_start = c_uint.in_dll(bn, 'time_turn_start')
 root_turn       = c_int.in_dll(bn, 'root_turn')
@@ -142,7 +143,7 @@ def cmd_resign(commands):
         try:
             resign_threshold.value = int(commands[0])
         except:
-	    str_error.value = str_bad_cmdline
+	    str_error.value = str_bad_cmdline.value
             return -2
     return 1
 
