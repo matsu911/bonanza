@@ -5,17 +5,34 @@ from ctypes.util import find_library
 SIZE_PLAYERNAME = 256
 MAX_ANSWER      = 8
 
-class Record_t(Structure):
-    _fields_ = [("info", (c_char * MAX_ANSWER * 8)),
-                ("str_name1", (c_char * SIZE_PLAYERNAME)),
-                ("str_name2", (c_char * SIZE_PLAYERNAME)),
-                ("pf", c_void_p),
-                ("games", c_uint),
-                ("moves", c_uint),
-                ("lines", c_uint)]
-
 MOVE_PONDER_FAILED = 0xfe000000
 MOVE_RESIGN        = 0xff000000
+
+black = 0
+white = 1
+
+nhand   = 7
+nfile   = 9
+nrank   = 9
+nsquare = 81
+
+promote    = 8
+empty      = 0
+pawn       = 1
+lance      = 2
+knight     = 3
+silver     = 4
+gold       = 5
+bishop     = 6
+rook       = 7
+king       = 8
+pro_pawn   = 9
+pro_lance  = 10
+pro_knight = 11
+pro_silver = 12
+piece_null = 13
+horse      = 14
+dragon     = 15
 
 flag_mated           = 0b0001
 flag_resigned        = 0b0010
@@ -51,6 +68,21 @@ flag_detect_hang = 0b1000
 flag_nomake_move = 0b0010 << 4
 flag_nofmargin   = 0b0100 << 4
 
+class Record_t(Structure):
+    _fields_ = [("info", (c_char * MAX_ANSWER * 8)),
+                ("str_name1", (c_char * SIZE_PLAYERNAME)),
+                ("str_name2", (c_char * SIZE_PLAYERNAME)),
+                ("pf", c_void_p),
+                ("games", c_uint),
+                ("moves", c_uint),
+                ("lines", c_uint)]
+
+class Min_posi_t(Structure):
+    _fields_ = [("hand_black", c_uint),
+                ("hand_white", c_uint),
+                ("turn_to_move", c_char),
+                ("asquare", (c_char * nsquare))]
+
 bn              = CDLL(find_library('./build/libbonanza'))
 c_stdout        = c_void_p.in_dll(bn, '__stdoutp')
 game_status     = c_int.in_dll(bn, 'game_status')
@@ -62,6 +94,8 @@ str_cmdline     = (c_char * 512).in_dll(bn, 'str_cmdline')
 time_turn_start = c_uint.in_dll(bn, 'time_turn_start')
 root_turn       = c_int.in_dll(bn, 'root_turn')
 record_game     = Record_t.in_dll(bn, 'record_game')
+
+min_posi_no_handicap = Min_posi_t.in_dll(bn, 'min_posi_no_handicap')
 
 bn.get_str_error.restype = c_char_p
 
@@ -111,6 +145,36 @@ def cmd_move(commands):
         if iret < 0: return iret
     return 1
 
+def cmd_new(commands):
+    if game_status.value & flag_thinking:
+	str_error.value = str_busy_think.value
+	return -2
+    elif game_status.value & (flag_pondering | flag_puzzling):
+	game_status.value |= flag_quit_ponder
+	return 2
+    if len(commands) == 0:
+        pmp = pointer(min_posi_no_handicap)
+    else:
+        min_posi = Min_posi_t()
+        memset(pointer(min_posi.asquare), empty, nsquare)
+        min_posi.hand_black = min_posi.hand_white = 0
+        iret = bn.read_board_rep1(str1, pointer(min_posi))
+        if iret < 0: return iret
+        if len(commands) == 1:
+            min_posi.turn_to_move = black
+        elif len(commands) == 2:
+	    if commands[1][0] == '-':
+                min_posi.turn_to_move = white
+	    elif commands[1][0] == '+':
+                min_posi.turn_to_move = black
+	    else:
+	        str_error.value = str_bad_cmdline.value
+	        return -2
+        pmp = pointer(min_posi)
+    iret = bn.ini_game(ptree, pmp, flag_history, None, None)
+    if iret < 0: return iret
+    return bn.get_elapsed(pointer(time_turn_start))
+
 def cmd_move_now(commands):
     if game_status.value & flag_thinking:
         game_status.value |= flag_move_now
@@ -155,6 +219,8 @@ def procedure(ptree):
         return cmd_move_now(commands[1:])
     if commands[0] == 'display':
         return cmd_display(commands[1:])
+    if commands[0] == 'new':
+        return cmd_new(commands[1:])
     if commands[0] == 'ping':
         return cmd_ping(commands[1:])
     if commands[0] == 'move':
