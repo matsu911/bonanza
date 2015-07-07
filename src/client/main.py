@@ -122,6 +122,19 @@ def cmd_beep(commands):
         return -2
     return 1
 
+def cmd_peek(commands):
+    if len(commands) == 0:
+        str_error.value = str_bad_cmdline.value
+        return -2
+    if commands[0] == 'on':
+        game_status.value &= ~flag_nopeek
+    elif commands[0] == 'off':
+        game_status.value |=  flag_nopeek
+    else:
+        str_error.value = str_bad_cmdline.value
+        return -2
+    return 1
+
 def cmd_move(commands):
     if game_status.value & mask_game_end:
         str_error.value = str_game_ended.value
@@ -236,6 +249,8 @@ def procedure(ptree):
         return cmd_new(commands[1:])
     if commands[0] == 'beep':
         return cmd_beep(commands[1:])
+    if commands[0] == 'peek':
+        return cmd_peek(commands[1:])
     if commands[0] == 'ping':
         return cmd_ping(commands[1:])
     if commands[0] == 'move':
