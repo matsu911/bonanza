@@ -109,6 +109,19 @@ def cmd_ping(commands):
     print "pong"
     return 1
 
+def cmd_beep(commands):
+    if len(commands) == 0:
+        str_error.value = str_bad_cmdline.value
+        return -2
+    if commands[0] == 'on':
+        game_status.value &= ~flag_nobeep
+    elif commands[0] == 'off':
+        game_status.value |= flag_nobeep
+    else:
+        str_error.value = str_bad_cmdline.value
+        return -2
+    return 1
+
 def cmd_move(commands):
     if game_status.value & mask_game_end:
         str_error.value = str_game_ended.value
@@ -221,6 +234,8 @@ def procedure(ptree):
         return cmd_display(commands[1:])
     if commands[0] == 'new':
         return cmd_new(commands[1:])
+    if commands[0] == 'beep':
+        return cmd_beep(commands[1:])
     if commands[0] == 'ping':
         return cmd_ping(commands[1:])
     if commands[0] == 'move':
