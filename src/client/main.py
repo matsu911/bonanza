@@ -291,23 +291,26 @@ def main_child(ptree):
     elif game_status.value & flag_quit:
         return -3
     return 1
-        
-if bn.ini(ptree) < 0:
-    show_error()
-    sys.exit(os.EX_OK)
 
-while True:
-    iret = main_child(ptree)
-    if iret == -1:
+def main():
+    if bn.ini(ptree) < 0:
         show_error()
-	bn.shutdown_all()
-	break
-    elif iret == -2:
-        show_error()
-	bn.shutdown_all()
-        continue
-    elif iret == -3:
-        break
+        sys.exit(os.EX_OK)
 
-if bn.fin() < 0:
-    show_error()
+    while True:
+        iret = main_child(ptree)
+        if iret == -1:
+            show_error()
+            bn.shutdown_all()
+            break
+        elif iret == -2:
+            show_error()
+            bn.shutdown_all()
+            continue
+        elif iret == -3:
+            break
+
+    if bn.fin() < 0:
+        show_error()
+
+main()
