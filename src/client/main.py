@@ -309,6 +309,21 @@ def cmd_limit(commands):
         return -2
     return 1
 
+def cmd_ponder(commands):
+    if len(commands) == 0:
+        str_error.value = str_bad_cmdline.value
+        return -2
+    if commands[0] == 'on':
+        game_status.value &= ~flag_noponder
+    elif commands[0] == 'off':
+        if game_status.value & (flag_pondering | flag_puzzling):
+	    game_status.value |= flag_quit_ponder;
+        game_status.value |= flag_noponder
+    else:
+        str_error.value = str_bad_cmdline.value
+        return -2
+    return 1
+
 def procedure(ptree):
     commands = str_cmdline.value.split()
     if len(commands) == 0 or commands[0][0] == '#':
@@ -323,6 +338,8 @@ def procedure(ptree):
         return cmd_beep(commands[1:])
     if commands[0] == 'peek':
         return cmd_peek(commands[1:])
+    if commands[0] == 'ponder':
+        return cmd_ponder(commands[1:])
     if commands[0] == 'stdout':
         return cmd_stdout(commands[1:])
     if commands[0] == 'limit':
