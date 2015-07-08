@@ -124,6 +124,9 @@ bn.get_str_error.restype = c_char_p
 
 ptree = bn.tlp_atree_work
 
+class BadCommandline(Exception):
+    pass
+
 def cmd_display(commands):
     bn.out_board(ptree, c_stdout, 0, 0)
     return 1
@@ -134,8 +137,7 @@ def cmd_ping(commands):
 
 def cmd_beep(commands):
     if len(commands) == 0:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     if commands[0] == 'on':
         game_status.value &= ~flag_nobeep
     elif commands[0] == 'off':
@@ -147,21 +149,18 @@ def cmd_beep(commands):
 
 def cmd_peek(commands):
     if len(commands) == 0:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     if commands[0] == 'on':
         game_status.value &= ~flag_nopeek
     elif commands[0] == 'off':
         game_status.value |=  flag_nopeek
     else:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     return 1
 
 def cmd_hash(commands):
     if len(commands) == 0:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     if game_status.value & flag_thinking:
 	str_error.value = str_busy_think.value
 	return -2
@@ -174,15 +173,13 @@ def cmd_hash(commands):
 
 def cmd_stdout(commands):
     if len(commands) == 0:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     if commands[0] == 'on':
         game_status.value &= ~flag_nostdout
     elif commands[0] == 'off':
         game_status.value |=  flag_nostdout
     else:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     return 1
 
 def cmd_move(commands):
@@ -244,8 +241,7 @@ def cmd_new(commands):
 	    elif commands[1][0] == '+':
                 min_posi.turn_to_move = black
 	    else:
-	        str_error.value = str_bad_cmdline.value
-	        return -2
+                raise BadCommandline
         pmp = pointer(min_posi)
     iret = bn.ini_game(ptree, pmp, flag_history, None, None)
     if iret < 0: return iret
@@ -283,27 +279,23 @@ def cmd_resign(commands):
         try:
             resign_threshold.value = int(commands[0])
         except:
-	    str_error.value = str_bad_cmdline.value
-            return -2
+            raise BadCommandline
     return 1
 
 def cmd_read(commands):
     if len(commands) == 0:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     flag    = flag_history | flag_rep | flag_detect_hang
     moves   = UINT_MAX
     if len(commands) > 1:
         if commands[1] == 't':
             flag |= flag_time
         elif commands[1] == 'nil':
-	    str_error.value = str_bad_cmdline.value
-	    return -2
+            raise BadCommandline
         try:
             moves = int(commands[2]) - 1
         except:
-	    str_error.value = str_bad_cmdline.value
-	    return -2
+            raise BadCommandline
     iret = bn.read_record(ptree, commands[0], moves, flag)
     if iret < 0: return iret
     iret = bn.get_elapsed(pointer(time_turn_start))
@@ -312,8 +304,7 @@ def cmd_read(commands):
 
 def cmd_limit(commands):
     if len(commands) == 0:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     if game_status.value & flag_thinking:
 	str_error.value = str_busy_think.value
 	return -2
@@ -331,8 +322,7 @@ def cmd_limit(commands):
             node_limit.value   = int(commands[1])
         elif commands[0] == "time":
             if len(commands) == 1:
-                str_error.value = str_bad_cmdline.value
-                return -2
+                raise BadCommandline
             if commands[1] == 'extendable':
                 game_status.value |= flag_time_extendable
             elif commands[1] == 'strict':
@@ -350,17 +340,14 @@ def cmd_limit(commands):
                 except:
                     sec_limit_depth.value = UINT_MAX
         else:
-            str_error.value = str_bad_cmdline.value
-            return -2
+            raise BadCommandline
     except:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     return 1
 
 def cmd_ponder(commands):
     if len(commands) == 0:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     if commands[0] == 'on':
         game_status.value &= ~flag_noponder
     elif commands[0] == 'off':
@@ -368,21 +355,18 @@ def cmd_ponder(commands):
 	    game_status.value |= flag_quit_ponder;
         game_status.value |= flag_noponder
     else:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     return 1
 
 def cmd_newlog(commands):
     if len(commands) == 0:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     if commands[0] == 'on':
         game_status.value &= ~flag_nonewlog
     elif commands[0] == 'off':
         game_status.value |=  flag_nonewlog
     else:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     return 1
 
 def procedure(ptree):
@@ -444,8 +428,12 @@ def main_child(ptree):
         return iret
     elif game_status.value & flag_quit:
         return -3
-    # iret = bn.procedure(ptree)
-    iret = procedure(ptree)
+    try:
+        # iret = bn.procedure(ptree)
+        iret = procedure(ptree)
+    except BadCommandline:
+        str_error.value = str_bad_cmdline.value
+        return -2
     if iret < 0:
         return iret
     elif game_status.value & flag_quit:
