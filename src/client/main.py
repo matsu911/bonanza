@@ -287,6 +287,29 @@ def cmd_resign(commands):
             return -2
     return 1
 
+def cmd_read(commands):
+    if len(commands) == 0:
+        str_error.value = str_bad_cmdline.value
+        return -2
+    flag    = flag_history | flag_rep | flag_detect_hang
+    moves   = UINT_MAX
+    if len(commands) > 1:
+        if commands[1] == 't':
+            flag |= flag_time
+        elif commands[1] == 'nil':
+	    str_error.value = str_bad_cmdline.value
+	    return -2
+        try:
+            moves = int(commands[2]) - 1
+        except:
+	    str_error.value = str_bad_cmdline.value
+	    return -2
+    iret = bn.read_record(ptree, commands[0], moves, flag)
+    if iret < 0: return iret
+    iret = bn.get_elapsed(pointer(time_turn_start))
+    if iret < 0: return iret
+    return 1
+
 def cmd_limit(commands):
     if len(commands) == 0:
         str_error.value = str_bad_cmdline.value
@@ -359,6 +382,8 @@ def procedure(ptree):
         return cmd_display(commands[1:])
     if commands[0] == 'new':
         return cmd_new(commands[1:])
+    if commands[0] == 'read':
+        return cmd_read(commands[1:])
     if commands[0] == 'beep':
         return cmd_beep(commands[1:])
     if commands[0] == 'peek':
