@@ -87,6 +87,14 @@ class Min_posi_t(Structure):
                 ("turn_to_move", c_char),
                 ("asquare", (c_char * nsquare))]
 
+class Trans_entry_t(Structure):
+    _fields_ = [("word1", c_uint64),
+                ("word2", c_uint64)]
+
+class Trans_table_t(Structure):
+    _fields_ = [("prefer", Trans_entry_t),
+                ("always", Trans_entry_t * 2)]
+
 bn               = CDLL(find_library('./build/libbonanza'))
 c_stdout         = c_void_p.in_dll(bn, '__stdoutp')
 game_status      = c_int.in_dll(bn, 'game_status')
@@ -106,6 +114,9 @@ node_per_second  = c_uint.in_dll(bn, 'node_per_second')
 node_next_signal = c_uint.in_dll(bn, 'node_next_signal')
 node_last_check  = c_uint.in_dll(bn, 'node_last_check')
 depth_limit      = c_int.in_dll(bn, 'depth_limit')
+
+log2_ntrans_table = c_int.in_dll(bn, 'log2_ntrans_table')
+ptrans_table_orig = POINTER(Trans_table_t).in_dll(bn, 'ptrans_table_orig')
 
 min_posi_no_handicap = Min_posi_t.in_dll(bn, 'min_posi_no_handicap')
 
@@ -146,6 +157,20 @@ def cmd_peek(commands):
         str_error.value = str_bad_cmdline.value
         return -2
     return 1
+
+def cmd_hash(commands):
+    if len(commands) == 0:
+        str_error.value = str_bad_cmdline.value
+        return -2
+    if game_status.value & flag_thinking:
+	str_error.value = str_busy_think.value
+	return -2
+    elif game_status.value & (flag_pondering | flag_puzzling):
+	game_status.value |= flag_quit_ponder
+	return 2
+    log2_ntrans_table.value = int(commands[0])
+    bn.memory_free(ptrans_table_orig)
+    return bn.ini_trans_table()
 
 def cmd_stdout(commands):
     if len(commands) == 0:
@@ -342,6 +367,8 @@ def procedure(ptree):
         return cmd_ponder(commands[1:])
     if commands[0] == 'stdout':
         return cmd_stdout(commands[1:])
+    if commands[0] == 'hash':
+        return cmd_hash(commands[1:])
     if commands[0] == 'limit':
         return cmd_limit(commands[1:])
     if commands[0] == 'ping':
