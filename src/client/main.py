@@ -372,6 +372,19 @@ def cmd_ponder(commands):
         return -2
     return 1
 
+def cmd_newlog(commands):
+    if len(commands) == 0:
+        str_error.value = str_bad_cmdline.value
+        return -2
+    if commands[0] == 'on':
+        game_status.value &= ~flag_nonewlog
+    elif commands[0] == 'off':
+        game_status.value |=  flag_nonewlog
+    else:
+        str_error.value = str_bad_cmdline.value
+        return -2
+    return 1
+
 def procedure(ptree):
     commands = str_cmdline.value.split()
     if len(commands) == 0 or commands[0][0] == '#':
@@ -382,6 +395,8 @@ def procedure(ptree):
         return cmd_display(commands[1:])
     if commands[0] == 'new':
         return cmd_new(commands[1:])
+    if commands[0] == 'newlog':
+        return cmd_newlog(commands[1:])
     if commands[0] == 'read':
         return cmd_read(commands[1:])
     if commands[0] == 'beep':
