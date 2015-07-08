@@ -146,8 +146,7 @@ def cmd_beep(commands):
     elif commands[0] == 'off':
         game_status.value |= flag_nobeep
     else:
-        str_error.value = str_bad_cmdline.value
-        return -2
+        raise BadCommandline
     return 1
 
 def cmd_peek(commands):
