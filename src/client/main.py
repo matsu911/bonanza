@@ -369,12 +369,29 @@ def cmd_newlog(commands):
         raise BadCommandline
     return 1
 
+def cmd_book(commands):
+    if len(commands) == 0:
+        raise BadCommandline
+    if commands[0] == 'on':
+        return bn.book_on()
+    elif commands[0] == 'off':
+        return bn.book_off()
+    elif commands[0] == 'narrow':
+        game_status.value |= flag_narrow_book
+    elif commands[0] == 'wide':
+        game_status.value &= ~flag_narrow_book
+    else:
+        raise BadCommandline
+    return 1
+
 def procedure(ptree):
     commands = str_cmdline.value.split()
     if len(commands) == 0 or commands[0][0] == '#':
         return 1
     if commands[0] == 's':
         return cmd_move_now(commands[1:])
+    if commands[0] == 'book':
+        return cmd_book(commands[1:])
     if commands[0] == 'display':
         return cmd_display(commands[1:])
     if commands[0] == 'new':
