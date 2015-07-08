@@ -127,6 +127,9 @@ ptree = bn.tlp_atree_work
 class BadCommandline(Exception):
     pass
 
+class BusyThink(Exception):
+    pass
+
 def cmd_display(commands):
     bn.out_board(ptree, c_stdout, 0, 0)
     return 1
@@ -162,8 +165,7 @@ def cmd_hash(commands):
     if len(commands) == 0:
         raise BadCommandline
     if game_status.value & flag_thinking:
-	str_error.value = str_busy_think.value
-	return -2
+        raise BusyThink
     elif game_status.value & (flag_pondering | flag_puzzling):
 	game_status.value |= flag_quit_ponder
 	return 2
@@ -187,8 +189,7 @@ def cmd_move(commands):
         str_error.value = str_game_ended.value
         return -2
     if game_status.value & flag_thinking:
-	str_error.value = str_busy_think.value
-	return -2
+        raise BusyThink
     elif game_status.value & (flag_pondering | flag_puzzling):
 	game_status.value |= flag_quit_ponder
 	return 2
@@ -220,8 +221,7 @@ def cmd_move(commands):
 
 def cmd_new(commands):
     if game_status.value & flag_thinking:
-	str_error.value = str_busy_think.value
-	return -2
+        raise BusyThink
     elif game_status.value & (flag_pondering | flag_puzzling):
 	game_status.value |= flag_quit_ponder
 	return 2
@@ -266,8 +266,7 @@ def cmd_suspend(commands):
 def cmd_resign(commands):
     if len(commands) == 0 or commands[0] == 'T':
         if game_status.value & flag_thinking:
-            str_error.value = str_busy_think.value
-            return -2
+            raise BusyThink
         elif game_status.value & (flag_pondering | flag_puzzling):
             game_status.value |= flag_quit_ponder
             return 2
@@ -306,8 +305,7 @@ def cmd_limit(commands):
     if len(commands) == 0:
         raise BadCommandline
     if game_status.value & flag_thinking:
-	str_error.value = str_busy_think.value
-	return -2
+        raise BusyThink
     elif game_status.value & (flag_pondering | flag_puzzling):
 	game_status.value |= flag_quit_ponder
 	return 2
@@ -451,6 +449,9 @@ def main_child(ptree):
     except BadCommandline:
         str_error.value = str_bad_cmdline.value
         return -2
+    except BusyThink:
+        str_error.value = str_busy_think.value
+	return -2
     if iret < 0:
         return iret
     elif game_status.value & flag_quit:
