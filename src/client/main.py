@@ -180,7 +180,7 @@ def com_turn_start(ptree, flag):
         assert(not (game_status.value & mask_game_end))
         time_start.value   = time_turn_start.value
         game_status.value |= flag_thinking
-        iret               = bn.iterate( ptree )
+        iret               = bn.iterate(ptree)
         game_status.value &= ~flag_thinking
         if iret < 0: return iret
     if game_status.value & flag_suspend: return 1
