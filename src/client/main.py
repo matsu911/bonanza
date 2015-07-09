@@ -20,6 +20,9 @@ nfile   = 9
 nrank   = 9
 nsquare = 81
 
+usi_off = 0
+usi_on = 1
+
 promote    = 8
 empty      = 0
 pawn       = 1
@@ -65,12 +68,32 @@ flag_noprompt        = 0b0100 << 20
 flag_sendpv          = 0b1000 << 20
 flag_skip_root_move  = 0b0001 << 24
 
+flag_from_ponder = 0b0001
+
 flag_time        = 0b0001
 flag_history     = 0b0010
 flag_rep         = 0b0100
 flag_detect_hang = 0b1000
 flag_nomake_move = 0b0010 << 4
 flag_nofmargin   = 0b0100 << 4
+
+no_rep           = 0
+four_fold_rep    = 1
+perpetual_check  = 2
+perpetual_check2 = 3
+black_superi_rep = 4
+white_superi_rep = 5
+hash_hit         = 6
+prev_solution    = 7
+book_hit         = 8
+pv_fail_high     = 9
+mate_search      = 10
+
+class Pv_t(Structure):
+    _fields_ = [("a", (c_int * PLY_MAX)),
+                ("type", c_ubyte),
+                ("length", c_ubyte),
+                ("depth", c_ubyte)]
 
 class Record_t(Structure):
     _fields_ = [("info", (c_char * MAX_ANSWER * 8)),
@@ -104,6 +127,7 @@ str_error        = c_char_p.in_dll(bn, 'str_error')
 str_bad_cmdline  = c_char_p.in_dll(bn, 'str_bad_cmdline')
 str_cmdline      = (c_char * 512).in_dll(bn, 'str_cmdline')
 time_turn_start  = c_uint.in_dll(bn, 'time_turn_start')
+time_start       = c_uint.in_dll(bn, 'time_start')
 root_turn        = c_int.in_dll(bn, 'root_turn')
 record_game      = Record_t.in_dll(bn, 'record_game')
 sec_limit        = c_uint.in_dll(bn, 'sec_limit')
@@ -115,12 +139,32 @@ node_next_signal = c_uint.in_dll(bn, 'node_next_signal')
 node_last_check  = c_uint.in_dll(bn, 'node_last_check')
 depth_limit      = c_int.in_dll(bn, 'depth_limit')
 
+sec_elapsed = c_uint.in_dll(bn, 'sec_elapsed')
+sec_b_total = c_uint.in_dll(bn, 'sec_b_total')
+sec_w_total = c_uint.in_dll(bn, 'sec_w_total')
+
+root_nmove       = c_int.in_dll(bn, 'root_nmove')
+root_index       = c_int.in_dll(bn, 'root_index')
+root_value       = c_int.in_dll(bn, 'root_value')
+root_alpha       = c_int.in_dll(bn, 'root_alpha')
+root_beta        = c_int.in_dll(bn, 'root_beta')
+root_turn        = c_int.in_dll(bn, 'root_turn')
+root_nfail_high  = c_int.in_dll(bn, 'root_nfail_high')
+root_nfail_low   = c_int.in_dll(bn, 'root_nfail_low')
+resign_threshold = c_int.in_dll(bn, 'resign_threshold')
+
 log2_ntrans_table = c_int.in_dll(bn, 'log2_ntrans_table')
 ptrans_table_orig = POINTER(Trans_table_t).in_dll(bn, 'ptrans_table_orig')
 
+# usi_mode = c_int.in_dll(bn, 'usi_mode')
+
+last_root_value = c_int.in_dll(bn, 'last_root_value')
+
+last_pv = Pv_t.in_dll(bn, 'last_pv')
+
 min_posi_no_handicap = Min_posi_t.in_dll(bn, 'min_posi_no_handicap')
 
-bn.get_str_error.restype = c_char_p
+bn.str_CSA_move.restype  = c_char_p
 
 ptree = bn.tlp_atree_work
 
@@ -129,6 +173,44 @@ class BadCommandline(Exception):
 
 class BusyThink(Exception):
     pass
+
+def com_turn_start(ptree, flag):
+    # return bn.com_turn_start(ptree, flag)
+    if not (flag & flag_from_ponder):
+        assert(not (game_status.value & mask_game_end))
+        time_start.value   = time_turn_start.value
+        game_status.value |= flag_thinking
+        iret               = bn.iterate( ptree )
+        game_status.value &= ~flag_thinking
+        if iret < 0: return iret
+    if game_status.value & flag_suspend: return 1
+    move  = last_pv.a[1]
+    value = -last_root_value.value if root_turn.value > 0 else last_root_value.value
+    if value < -resign_threshold.value and last_pv.type != pv_fail_high:
+        is_resign = True
+    else:
+        is_resign = False
+    if is_resign:
+        print "%TORYO"          # CSA
+        print "resign"
+    if is_resign:
+        bn.show_prompt()
+        game_status.value |= flag_resigned
+        bn.update_time(root_turn)
+        bn.out_CSA(ptree, pointer(record_game), MOVE_RESIGN)
+        sec_total = sec_w_total.value if root_turn.value > 0 else sec_b_total.value
+        str_move  = "resign"
+    else:
+        bn.show_prompt()
+        iret = bn.make_move_root(ptree, move, (flag_rep | flag_time | flag_history))
+        if iret < 0: return iret
+        sec_total = sec_b_total.value if root_turn.value > 0 else sec_w_total.value
+        str_move  = bn.str_CSA_move(move)
+    print "%s '(%d%s) %03u:%02u/%03u:%02u  elapsed: b%u, w%u" % (str_move, value, "!" if last_pv.type == pv_fail_high else "", sec_elapsed.value / 60, sec_elapsed.value % 60, sec_total / 60, sec_total % 60, sec_b_total.value, sec_w_total.value)
+    if not is_resign:
+        iret = bn.out_board(ptree, c_stdout, move, 0)
+        if iret < 0: return iret
+    return 1
 
 def cmd_display(commands):
     bn.out_board(ptree, c_stdout, 0, 0)
@@ -196,14 +278,14 @@ def cmd_move(commands):
         iret = bn.get_elapsed(pointer(time_turn_start))
         if iret < 0:
             return iret
-        return bn.com_turn_start(ptree, 0)
+        return com_turn_start(ptree, 0)
     try:
         for i in range(0, int(commands[0])):
             if game_status.value & (flag_move_now | mask_game_end):
                 break
 	    iret = bn.get_elapsed(pointer(time_turn_start))
 	    if iret < 0: return iret
-	    iret = bn.com_turn_start(ptree, 0)
+	    iret = com_turn_start(ptree, 0)
 	    if iret < 0: return iret
         return 1
     except:
