@@ -512,30 +512,28 @@ def main_child(ptree):
     iret = bn.ponder(ptree)
     if iret < 0:
         return iret
-    elif game_status.value & flag_quit:
+    if game_status.value & flag_quit:
         return -3
-    elif ponder_move == MOVE_PONDER_FAILED:
-        pass
-    else:
+    if ponder_move != MOVE_PONDER_FAILED:
         bn.tlp_end()
         bn.show_prompt()
     iret = bn.next_cmdline(1)
     if iret < 0:
         return iret
-    elif game_status.value & flag_quit:
+    if game_status.value & flag_quit:
         return -3
     try:
         # iret = bn.procedure(ptree)
         iret = procedure(ptree)
+        if iret < 0:
+            return iret
     except BadCommandline:
         str_error.value = str_bad_cmdline.value
         return -2
     except BusyThink:
         str_error.value = str_busy_think.value
 	return -2
-    if iret < 0:
-        return iret
-    elif game_status.value & flag_quit:
+    if game_status.value & flag_quit:
         return -3
     return 1
 
