@@ -193,15 +193,14 @@ def com_turn_start(ptree, flag):
     if is_resign:
         print "%TORYO"          # CSA
         print "resign"
+    bn.show_prompt()
     if is_resign:
-        bn.show_prompt()
         game_status.value |= flag_resigned
         bn.update_time(root_turn)
         bn.out_CSA(ptree, pointer(record_game), MOVE_RESIGN)
         sec_total = sec_w_total.value if root_turn.value > 0 else sec_b_total.value
         str_move  = "resign"
     else:
-        bn.show_prompt()
         iret = bn.make_move_root(ptree, move, (flag_rep | flag_time | flag_history))
         if iret < 0: return iret
         sec_total = sec_b_total.value if root_turn.value > 0 else sec_w_total.value
