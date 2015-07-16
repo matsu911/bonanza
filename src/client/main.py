@@ -557,4 +557,5 @@ def main():
     if bn.fin() < 0:
         show_error()
 
-main()
+if __name__ == "__main__":
+    main()
