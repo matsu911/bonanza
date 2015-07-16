@@ -211,15 +211,15 @@ def com_turn_start(ptree, flag):
         if iret < 0: return iret
     return 1
 
-def cmd_display(commands):
+def cmd_display(commands = []):
     bn.out_board(ptree, c_stdout, 0, 0)
     return 1
 
-def cmd_ping(commands):
+def cmd_ping(commands = []):
     print "pong"
     return 1
 
-def cmd_beep(commands):
+def cmd_beep(commands = []):
     if len(commands) == 0:
         raise BadCommandline
     if commands[0] == 'on':
@@ -230,7 +230,7 @@ def cmd_beep(commands):
         raise BadCommandline
     return 1
 
-def cmd_peek(commands):
+def cmd_peek(commands = []):
     if len(commands) == 0:
         raise BadCommandline
     if commands[0] == 'on':
@@ -241,7 +241,7 @@ def cmd_peek(commands):
         raise BadCommandline
     return 1
 
-def cmd_hash(commands):
+def cmd_hash(commands = []):
     if len(commands) == 0:
         raise BadCommandline
     if game_status.value & flag_thinking:
@@ -253,7 +253,7 @@ def cmd_hash(commands):
     bn.memory_free(ptrans_table_orig)
     return bn.ini_trans_table()
 
-def cmd_stdout(commands):
+def cmd_stdout(commands = []):
     if len(commands) == 0:
         raise BadCommandline
     if commands[0] == 'on':
@@ -264,7 +264,7 @@ def cmd_stdout(commands):
         raise BadCommandline
     return 1
 
-def cmd_move(commands):
+def cmd_move(commands = []):
     if game_status.value & mask_game_end:
         str_error.value = str_game_ended.value
         return -2
@@ -299,7 +299,7 @@ def cmd_move(commands):
         if iret < 0: return iret
     return 1
 
-def cmd_new(commands):
+def cmd_new(commands = []):
     if game_status.value & flag_thinking:
         raise BusyThink
     elif game_status.value & (flag_pondering | flag_puzzling):
@@ -327,23 +327,23 @@ def cmd_new(commands):
     if iret < 0: return iret
     return bn.get_elapsed(pointer(time_turn_start))
 
-def cmd_move_now(commands):
+def cmd_move_now(commands = []):
     if game_status.value & flag_thinking:
         game_status.value |= flag_move_now
     return 1
 
-def cmd_quit(commands):
+def cmd_quit(commands = []):
     game_status.value |= flag_quit
     return 1
 
-def cmd_suspend(commands):
+def cmd_suspend(commands = []):
     if game_status.value & (flag_pondering | flag_puzzling):
         game_status.value |= flag_quit_ponder
         return 2
     game_status.value |= flag_suspend
     return 1
 
-def cmd_resign(commands):
+def cmd_resign(commands = []):
     if len(commands) == 0 or commands[0] == 'T':
         if game_status.value & flag_thinking:
             raise BusyThink
@@ -361,7 +361,7 @@ def cmd_resign(commands):
             raise BadCommandline
     return 1
 
-def cmd_read(commands):
+def cmd_read(commands = []):
     if len(commands) == 0:
         raise BadCommandline
     flag    = flag_history | flag_rep | flag_detect_hang
@@ -381,7 +381,7 @@ def cmd_read(commands):
     if iret < 0: return iret
     return 1
 
-def cmd_limit(commands):
+def cmd_limit(commands = []):
     if len(commands) == 0:
         raise BadCommandline
     if game_status.value & flag_thinking:
@@ -423,7 +423,7 @@ def cmd_limit(commands):
         raise BadCommandline
     return 1
 
-def cmd_ponder(commands):
+def cmd_ponder(commands = []):
     if len(commands) == 0:
         raise BadCommandline
     if commands[0] == 'on':
@@ -436,7 +436,7 @@ def cmd_ponder(commands):
         raise BadCommandline
     return 1
 
-def cmd_newlog(commands):
+def cmd_newlog(commands = []):
     if len(commands) == 0:
         raise BadCommandline
     if commands[0] == 'on':
@@ -447,7 +447,7 @@ def cmd_newlog(commands):
         raise BadCommandline
     return 1
 
-def cmd_book(commands):
+def cmd_book(commands = []):
     if len(commands) == 0:
         raise BadCommandline
     if commands[0] == 'on':
