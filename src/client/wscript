@@ -9,11 +9,11 @@ def configure(ctx):
 def build(ctx):
     defines = ['NDEBUG', 'MINIMUM', 'HAVE_SSE4', 'DFPN', 'TLP', 'DFPN_CLIENT', 'INANIWA_SHIFT', 'MNJ_LAN', 'CSA_LAN']
     ctx.shlib(source=ctx.path.ant_glob('*.c', excl='main.c'),
-              cflags=['-msse4.1'],
+              cflags=['-msse4.1', '-Wpadded'],
               defines=defines,
               target='bonanza')
     ctx.program(source='main.c',
                 use='bonanza',
-                cflags=['-msse4.1'],
+                cflags=['-msse4.1', '-Wpadded'],
                 defines=defines,
                 target='main')

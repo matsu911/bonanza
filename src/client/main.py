@@ -9,6 +9,20 @@ SIZE_PLAYERNAME = 256
 MAX_ANSWER      = 8
 PLY_MAX         = 128
 
+REP_MAX_PLY  = 32
+REP_HIST_LEN = 256
+
+MAX_LEGAL_MOVES   = 700
+MAX_LEGAL_EVASION = 256
+MOVE_LIST_LEN     = 16384
+
+HIST_SIZE    = 0x4000
+HIST_INVALID = 0xffff
+HIST_MAX     = 0x8000
+
+TLP_MAX_THREADS = 12
+TLP_NUM_WORK    = TLP_MAX_THREADS * 8
+
 MOVE_PONDER_FAILED = 0xfe000000
 MOVE_RESIGN        = 0xff000000
 
@@ -89,11 +103,13 @@ book_hit         = 8
 pv_fail_high     = 9
 mate_search      = 10
 
-class Bitboard_t(Structure):
-    _fields_ = [('p', (c_uint * 3))]
+Lock_t = c_long
+
+Bitboard_t = c_uint * 4         # padding considered
 
 class Posi_t(Structure):
-    _fields_ = [('hash_key', c_uint64)]
+    _fields_ = [('hash_key', c_uint64),
+                ('_padding', c_uint64)]
     _fields_ += [(x, Bitboard_t)
                  for x in ['b_occupied', 'w_occupied',
                            'occupied_rl90', 'occupied_rl45', 'occupied_rr45',
@@ -123,20 +139,87 @@ class Posi_t(Structure):
                  ('isquare_w_king', c_ubyte)]
 
 class Pv_t(Structure):
-    _fields_ = [("a", (c_int * PLY_MAX)),
+    _fields_ = [("a", (c_uint * PLY_MAX)),
                 ("type", c_ubyte),
                 ("length", c_ubyte),
                 ("depth", c_ubyte)]
 
 class Next_move_t(Structure):
-    _fields_ = [('move_last', POINTER(c_int)),
-                ('move_cap1', c_int),
-                ('move_cap2', c_int),
+    _fields_ = [('move_last', POINTER(c_uint)),
+                ('move_cap1', c_uint),
+                ('move_cap2', c_uint),
                 ('phase_done', c_int),
                 ('next_phase', c_int),
                 ('remaining', c_int),
                 ('value_cap1', c_int),
                 ('value_cap2', c_int)]
+
+class Move_killer_t(Structure):
+    _fields_ = [('no1_value', c_int),
+                ('no2_value', c_int),
+                ('no1', c_uint),
+                ('no2', c_uint)]
+
+class Killer_t(Structure):
+    _fields_ = [('no1', c_uint),
+                ('no2', c_uint)]
+
+class Tree_t(Structure):
+    _fields_ = [('posi', Posi_t),
+                ('rep_board_list', (c_uint64 * REP_HIST_LEN)),
+                ('node_searched', c_uint64),
+                ('move_last', (POINTER(c_uint) * PLY_MAX)),
+                ('anext_move', (Next_move_t * PLY_MAX)),
+                ('pv', (Pv_t * PLY_MAX)),
+                ('amove_killer', (Move_killer_t * PLY_MAX))]
+    _fields_ += [(x, c_uint)
+                 for x in ['null_pruning_done',
+                           'null_pruning_tried',
+                           'check_extension_done',
+                           'recap_extension_done',
+                           'onerp_extension_done',
+                           'neval_called',
+                           'nquies_called',
+                           'nfour_fold_rep',
+                           'nperpetual_check',
+                           'nsuperior_rep',
+                           'nrep_tried',
+                           'ntrans_always_hit',
+                           'ntrans_prefer_hit',
+                           'ntrans_probe',
+                           'ntrans_exact',
+                           'ntrans_lower',
+                           'ntrans_upper',
+                           'ntrans_superior_hit',
+                           'ntrans_inferior_hit',
+                           'fail_high',
+                           'fail_high_first']]
+    _fields_ += [('rep_hand_list', (c_uint * REP_HIST_LEN)),
+                 ('amove_hash', (c_uint * PLY_MAX)),
+                 ('current_move', (c_uint * PLY_MAX)),
+                 ('killers', (Killer_t * PLY_MAX)),
+                 ('hist_nmove', (c_uint * PLY_MAX)),
+                 ('hist_move', ((c_uint * MAX_LEGAL_MOVES) * PLY_MAX)),
+                 ('hist_tried', (c_ushort * HIST_SIZE)),
+                 ('hist_good', (c_ushort * HIST_SIZE)),
+                 ('save_material', (c_short * PLY_MAX)),
+                 ('save_eval', (c_int * (PLY_MAX + 1))),
+                 ('nsuc_check', (c_ubyte * (PLY_MAX + 1))),
+                 ('nrep', c_int),
+                 ('tlp_ptrees_sibling', (c_void_p * TLP_MAX_THREADS)),
+                 ('tlp_ptree_parent', c_void_p),
+                 ('tlp_lock', Lock_t),
+                 ('tlp_abort', c_int),
+                 ('tlp_used', c_int),
+                 ('tlp_slot', c_ushort),
+                 ('tlp_beta', c_short),
+                 ('tlp_best', c_short),
+                 ('tlp_nsibling', c_ubyte),
+                 ('tlp_depth', c_ubyte),
+                 ('tlp_state_node', c_ubyte),
+                 ('tlp_id', c_ubyte),
+                 ('tlp_turn', c_char),
+                 ('tlp_ply', c_char)]
 
 class Record_t(Structure):
     _fields_ = [("info", (c_char * MAX_ANSWER * 8)),
@@ -209,7 +292,7 @@ min_posi_no_handicap = Min_posi_t.in_dll(bn, 'min_posi_no_handicap')
 
 bn.str_CSA_move.restype  = c_char_p
 
-ptree = bn.tlp_atree_work
+ptree = (Tree_t * TLP_NUM_WORK).in_dll(bn, 'tlp_atree_work')
 
 class BadCommandline(Exception):
     pass
@@ -583,7 +666,7 @@ def main():
     if bn.ini(ptree) < 0:
         show_error()
         sys.exit(os.EX_OK)
-
+    cmd_ponder(['off'])
     while True:
         iret = main_child(ptree)
         if iret == -1:
