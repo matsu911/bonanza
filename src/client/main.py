@@ -89,11 +89,54 @@ book_hit         = 8
 pv_fail_high     = 9
 mate_search      = 10
 
+class Bitboard_t(Structure):
+    _fields_ = [('p', (c_uint * 3))]
+
+class Posi_t(Structure):
+    _fields_ = [('hash_key', c_uint64)]
+    _fields_ += [(x, Bitboard_t)
+                 for x in ['b_occupied', 'w_occupied',
+                           'occupied_rl90', 'occupied_rl45', 'occupied_rr45',
+                           'b_hdk', 'w_hdk',
+                           'b_tgold', 'w_tgold',
+                           'b_bh', 'w_bh',
+                           'b_rd', 'w_rd',
+                           'b_pawn_attacks', 'w_pawn_attacks',
+                           'b_lance', 'w_lance',
+                           'b_knight', 'w_knight',
+                           'b_silver', 'w_silver',
+                           'b_bishop', 'w_bishop',
+                           'b_rook', 'w_rook',
+                           'b_horse', 'w_horse',
+                           'b_dragon', 'w_dragon',
+                           'b_pawn', 'w_pawn',
+                           'b_gold', 'w_gold',
+                           'b_pro_pawn', 'w_pro_pawn',
+                           'b_pro_lance', 'w_pro_lance',
+                           'b_pro_knight', 'w_pro_knight',
+                           'b_pro_silver', 'w_pro_silver']]
+    _fields_ += [('hand_black', c_uint),
+                 ('hand_white', c_uint),
+                 ('material', c_int),
+                 ('asquare', (c_char * nsquare)),
+                 ('isquare_b_king', c_ubyte),
+                 ('isquare_w_king', c_ubyte)]
+
 class Pv_t(Structure):
     _fields_ = [("a", (c_int * PLY_MAX)),
                 ("type", c_ubyte),
                 ("length", c_ubyte),
                 ("depth", c_ubyte)]
+
+class Next_move_t(Structure):
+    _fields_ = [('move_last', POINTER(c_int)),
+                ('move_cap1', c_int),
+                ('move_cap2', c_int),
+                ('phase_done', c_int),
+                ('next_phase', c_int),
+                ('remaining', c_int),
+                ('value_cap1', c_int),
+                ('value_cap2', c_int)]
 
 class Record_t(Structure):
     _fields_ = [("info", (c_char * MAX_ANSWER * 8)),
